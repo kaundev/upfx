@@ -54,6 +54,7 @@ public class MainController extends Controller {
 ```
 <h3>Navigation</h3>
 
+<h4>Rendering</h4>
 - result method from the example above receives a string url of .fxml file, string title of the page
 and others parameters that you can pass through controllers. See the example:
 
@@ -84,4 +85,95 @@ PaneController paneController = result.getPane("/views/lessons/studentCard.fxml"
 this.changeblePane.getChildren().add(paneController.getRoot());
 ```
 
+<h3>Popup</h3>
+Also you can create popups, passing .fxml location, the title and other parameters you need.
+
+```java
+public void popupNoPermission(){
+    result.openPopup("/views/users/noPermission.fxml", "No permission");
+}
+```
+
 For code organization, I recomend creating a Routes class and putting all the routes inside it.
+
+<h2>Security</h2>
+
+- First create an anotation that represents the existing rules. In this example SecurityType is an Enum.
+
+```java
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface SecurityTypeRule {
+    SecurityType type();
+}
+```
+
+- Then, create an Handler if the user doenst have permission:
+
+```java
+public class AuthenticationSecurityHandler extends SecurityHandler{
+
+    private Routes routes;
+
+    @Inject
+    public AuthenticationSecurityHandler(Routes routes) {
+        this.routes = routes;
+    }
+
+    @Override
+    public void handle(InvocationContext invocationContext) {
+        routes.popupNoPermission();
+    }
+}
+```
+
+- Then, create the Rule class implemeting SecurityRule;
+- Annotate the class with @Handler passing the handler you created
+- To perform the security create "isAllowed" method return a boolean. This method receives an AnnotatedElement that can be a class or an method. From annotatedElement you can retreive the annotation created.
+
+```java
+@Handler(AuthenticationSecurityHandler.class)
+public class DefaultRule implements SecurityRule {
+
+    private LoggedUser loggedUser;
+
+    @Inject
+    public DefaultRule(LoggedUser loggedUser) {
+        this.loggedUser = loggedUser;
+    }
+
+    public boolean isAllowed(AnnotatedElement annotatedElement) {
+        SecurityTypeRule securityTypeRule = annotatedElement.getAnnotation(SecurityTypeRule.class);
+        return loggedUserHasPermission(securityTypeRule.type)
+    }
+}
+```
+
+- For Controller classes, just call Class security Annotation passing the ClassRule
+```java
+@ClassSecurity(value = DefaultRule.class) @SecurityTypeRule(type =  SecurityType.list_student)
+public class MySecurityController extends Controller{
+    ...
+}
+```
+
+- For methods, call MethodSecurity annotation passing the ClassRule
+```java
+@FXML @MethodSecurity(value = DefaultRule.class) @SecurityTypeRule(type = SecurityType.create_admin)
+protected void addAdmin(){
+    routes.newAdministrator();
+}
+```
+
+<h2>Multi language from ResourceBundle</h2>
+- The only thing to do is create a producer method passing the location of the properties file, like: "Bundle_pt_BR.properties" inside META-INF/locales/Bundle_pt_BR.properties
+
+```java
+public class ResourceBundleProducer {
+
+    @Produces
+    public ResourceBundle produceResourceBundle() {
+        return ResourceBundle.getBundle("META-INF/Bundle", new Locale("pt", "BR"));
+    }
+}
+```
