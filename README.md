@@ -18,6 +18,15 @@ How to use it:
 - Call initiate method passing the Main class
 - With result you can call render method with the fxml location and the title
 
+
+```xml
+<dependency>
+    <groupId>com.github.kaundev.upfx</groupId>
+    <artifactId>upfx-core</artifactId>
+    <version>1.0.2</version>
+</dependency>
+```
+
 ```java
 public class Main extends FxMain {
 
